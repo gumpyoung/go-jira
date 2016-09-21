@@ -12,6 +12,12 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
+// BasicAuth
+type BasicAuth struct {
+	userName string
+	password string
+}
+
 // A Client manages communication with the JIRA API.
 type Client struct {
 	// HTTP client used to communicate with the API.
@@ -22,6 +28,9 @@ type Client struct {
 
 	// Session storage if the user authentificate with a Session cookie
 	session *Session
+
+	// Basic Auth
+	basiceAuth *BasicAuth
 
 	// Services used for talking to different parts of the JIRA API.
 	Authentication *AuthenticationService
@@ -59,6 +68,16 @@ func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
 	c.Sprint = &SprintService{client: c}
 
 	return c, nil
+}
+
+// SetBasicAuth
+func (c *Client) SetBasicAuth(userName string, password string) {
+	c.basiceAuth = &BasicAuth{userName, password}
+}
+
+// RemoveBasicAuth
+func (c *Client) RemoveBasicAuth() {
+	c.basiceAuth = nil
 }
 
 // NewRequest creates an API request.
@@ -154,6 +173,10 @@ func (c *Client) NewMultiPartRequest(method, urlStr string, buf *bytes.Buffer) (
 // Do sends an API request and returns the API response.
 // The API response is JSON decoded and stored in the value pointed to by v, or returned as an error if an API error has occurred.
 func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
+	if c.basiceAuth != nil {
+		req.SetBasicAuth(c.basiceAuth.userName, c.basiceAuth.password)
+	}
+
 	httpResp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
